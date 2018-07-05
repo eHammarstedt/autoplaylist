@@ -22,7 +22,7 @@ internal fun buildClientUrl() = URL(
                 "&scope=${scope()}" +
                 "&redirect_uri=${redirectUrl().encode()}" +
                 "&state=${UUID.randomUUID().toString().encode()}" +
-                "&show_dialog=true"
+                "&show_dialog=false"
 )
 
 internal fun getToken(code: String): CompletableFuture<Tokens> {

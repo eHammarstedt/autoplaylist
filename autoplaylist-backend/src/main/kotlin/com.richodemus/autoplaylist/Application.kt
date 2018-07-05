@@ -2,20 +2,25 @@ package com.richodemus.autoplaylist
 
 import io.github.vjames19.futures.jdk8.Future
 import io.github.vjames19.futures.jdk8.flatMap
+import io.github.vjames19.futures.jdk8.map
 import io.github.vjames19.futures.jdk8.zip
 import org.slf4j.LoggerFactory
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.ModelAndView
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
 @RestController
 @SpringBootApplication
 open class Application {
     private val logger = LoggerFactory.getLogger(Application::class.java)
+    private val playlists = mutableMapOf<UUID, List<PlayList>>()
 
     @GetMapping("/login")
     fun login() = ModelAndView("redirect:" + buildClientUrl())
@@ -48,20 +53,32 @@ open class Application {
         val userIdFuture = tokenFuture.flatMap { getUserId(it.accessToken) }
         val playlistsFuture = tokenFuture.flatMap { getPlaylists(it.accessToken) }
 
-        return userIdFuture.zip(playlistsFuture) { userId, playListsResponse ->
+        val allDone = userIdFuture.zip(playlistsFuture)
+                .map { (userId, playList) ->
+                    Triple(userId, playList, UUID.randomUUID())
+                }
+
+        allDone.map { (_, playList, sessionId) ->
+            playlists.put(sessionId, playList.items)
+        }
+
+        return allDone.map { (userId, _, sessionId) ->
             """
                 <html>
                     <body>
-                    Hi $userId </br>
-                    <a href="/">back</a> </br>
-                    Playlists: </br>
-                    <ul>
-                    ${playListsResponse.items.joinToString(separator = "") { "<li>${it.name}</li>" }}
-                    </ul>
+                    <script type="text/javascript">
+                        window.location.replace("http://localhost:3000?session=$sessionId&userId=$userId");
+                    </script>
                     </body>
                 </html>
             """.trimIndent()
         }
+    }
+
+    @CrossOrigin(origins = ["*"])
+    @GetMapping("/playlists/{sessionId}")
+    internal fun getPlaylists(@PathVariable(value = "sessionId") sessionId: String): List<PlayList>? {
+        return playlists[UUID.fromString(sessionId)]
     }
 }
 
