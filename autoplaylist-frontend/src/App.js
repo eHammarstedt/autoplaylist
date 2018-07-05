@@ -1,9 +1,42 @@
-import React, {Component} from 'react';
-import logo from './logo.svg';
+import React from 'react';
 import './App.css';
-import * as queryString from "query-string";
+import {applyMiddleware, compose, createStore} from "redux";
+import {Provider} from "react-redux";
+import WelcomeView from "./Welcome/WelcomeView";
+import HttpNetworkingMiddleware from "./Networking/HttpNetworkingMiddleware";
+import BaseReducer from "./BaseReducer";
 
+// Node doesn't support these so tests fail...
+if (!console["group"]) console["group"] = () => {};
+if (!console["groupCollapsed"]) console["groupCollapsed"] = () => {};
+if (!console["groupEnd"]) console["groupEnd"] = () => {};
 
+const logger = store => next => action => {
+    console.group("Action:", action.type);
+    console.info('dispatching', action);
+    let result = next(action);
+    console.log('next state', store.getState());
+    console.groupEnd(action.type);
+    return result
+};
+
+const enhancer = compose(
+    applyMiddleware(logger, HttpNetworkingMiddleware)
+);
+
+const store = createStore(
+    BaseReducer,
+    enhancer
+);
+
+const App = () => (
+    <Provider store={store}>
+        <div className="App">
+            <WelcomeView/>
+        </div>
+    </Provider>
+);
+/*
 class App extends Component {
     constructor(props) {
         super(props);
@@ -72,5 +105,5 @@ class App extends Component {
     }
 }
 
-
+*/
 export default App;
