@@ -11,13 +11,22 @@ class App extends Component {
         this.state = {
             session: null,
             userId: null,
-            playLists: []
+            playLists: [],
+            error: null
         };
     }
 
     componentDidMount() {
         const parsed = queryString.parse(window.location.search);
         const session = parsed.session;
+        const error = parsed.error;
+
+        if (error) {
+            this.setState({
+                error: error
+            });
+            return;
+        }
 
         session && this.setState({
             session: session,
@@ -46,17 +55,18 @@ class App extends Component {
                     <h1 className="App-title">Autoplaylist</h1>
                 </header>
                 <div>
-                    {!this.state.session && <a href="http://localhost:8080/login">Log in with Spotify</a>}
+                    {this.state.error && (<div>{this.state.error}</div>)}
+                    {(!this.state.session && !this.state.error) && <a href="http://localhost:8080/login">Log in with Spotify</a>}
                     {this.state.session && "Logged in as " + this.state.userId + " with session: " + this.state.session}
                 </div>
                 <div>
                     <ul>
-                    {this.state.playLists.map(item => item.name).map(item => (
-                        <li>{item}</li>
-                    ))}
+                        {this.state.playLists.map(item => item.name).map(item => (
+                            <li>{item}</li>
+                        ))}
                     </ul>
                 </div>
-                {this.state.session && (<a href={"http://localhost:3000/"}>log out or something</a>)}
+                {(this.state.session || this.state.error) && (<a href={"http://localhost:3000/"}>log out or something</a>)}
             </div>
         );
     }

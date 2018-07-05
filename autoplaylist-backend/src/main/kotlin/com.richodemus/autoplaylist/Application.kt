@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.ModelAndView
@@ -25,22 +26,22 @@ open class Application {
     @GetMapping("/login")
     fun login() = ModelAndView("redirect:" + buildClientUrl())
 
-    @GetMapping("/callback")
+    @RequestMapping("/callback")
     fun callback(@RequestParam(value = "state") state: String,
                  @RequestParam(value = "code", required = false) code: String?,
                  @RequestParam(value = "error", required = false) error: String?
-    ): CompletableFuture<String> {
+    ): CompletableFuture<ModelAndView> {
         if (error == "access_denied") {
             logger.warn("State {} denied permissions")
             return Future {
-                "<html><body>No permisonerino</body></html>"
+                ModelAndView("redirect:http://localhost:3000?error=denied")
             }
         }
 
         if (code == null) {
             logger.error("State {} no code despite no error")
             return Future {
-                "<html><body>No idea what happened, your state is $state</body></html>"
+                ModelAndView("redirect:http://localhost:3000?error=unknown")
             }
         }
 
@@ -63,15 +64,7 @@ open class Application {
         }
 
         return allDone.map { (userId, _, sessionId) ->
-            """
-                <html>
-                    <body>
-                    <script type="text/javascript">
-                        window.location.replace("http://localhost:3000?session=$sessionId&userId=$userId");
-                    </script>
-                    </body>
-                </html>
-            """.trimIndent()
+            ModelAndView("redirect:http://localhost:3000?session=$sessionId&userId=$userId\"")
         }
     }
 
