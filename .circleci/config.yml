@@ -1,0 +1,18 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: docker:17.05.0-ce-git
+    branches:
+      only:
+        - master
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build docker images
+          command: ./build.sh
+      - run: |
+                docker login -u $DOCKER_USER -p $DOCKER_PASS
+                docker push richodemus/autoplaylists-frontend:latest
+                docker push richodemus/autoplaylists-backend:latest
