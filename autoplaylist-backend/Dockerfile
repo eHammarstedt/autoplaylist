@@ -18,3 +18,5 @@ COPY --from=builder /src/jars .
 
 # the urandom thing reduces tomcat startup time, no idea if it's smart or not
 CMD ["java","-Djava.security.egd=file:/dev/./urandom","-jar","autoplaylist-backend.jar"]
+
+EXPOSE 8080
