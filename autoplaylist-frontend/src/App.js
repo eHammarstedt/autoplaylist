@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import logo from './logo.svg';
 import './App.css';
-import authenticate from './Networking/Oauth2'
+import {authenticate, getBackendBaseUrl} from './Networking/Oauth2'
 import getParameterByName from './Util/QueryString'
 
 
@@ -23,7 +23,7 @@ class App extends Component {
             // todo handle error
             window.history.pushState('Main', 'Title', '/');
 
-            let sessionIdPromise = fetch('http://localhost:8080/sessions', {
+            let sessionIdPromise = fetch(getBackendBaseUrl() + '/sessions', {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -42,7 +42,7 @@ class App extends Component {
 
             sessionIdPromise
                 .then(sessionId => {
-                    fetch('http://localhost:8080/sessions/' + sessionId + '/userId')
+                    fetch(getBackendBaseUrl() + '/sessions/' + sessionId + '/userId')
                         .then(response => response.json())
                         .then(userId => {
                             if (userId.error) {
@@ -60,7 +60,7 @@ class App extends Component {
 
             sessionIdPromise
                 .then(sessionId => {
-                    fetch('http://localhost:8080/sessions/' + sessionId + '/playlists')
+                    fetch(getBackendBaseUrl() + '/sessions/' + sessionId + '/playlists')
                         .then(response => response.json())
                         .then(playlists => {
                             if (playlists.error) {
