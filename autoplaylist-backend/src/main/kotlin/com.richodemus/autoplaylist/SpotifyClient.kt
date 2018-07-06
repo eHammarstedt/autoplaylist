@@ -58,7 +58,7 @@ private inline fun <reified T : Any> Request.deserialize(): CompletableFuture<T>
         when (result) {
             is Result.Failure -> {
                 val ex = result.getException()
-                logger.error("Call failed", ex)
+                logger.error("Call failed: $result", ex)
                 future.completeExceptionally(ex)
             }
             is Result.Success -> {

@@ -2,6 +2,7 @@ import React, {Component} from 'react';
 import logo from './logo.svg';
 import './App.css';
 import * as queryString from "query-string";
+import authenticate from './Networking/Oauth2'
 
 
 class App extends Component {
@@ -14,35 +15,66 @@ class App extends Component {
             playLists: [],
             error: null
         };
-    }
 
-    componentDidMount() {
-        const parsed = queryString.parse(window.location.search);
-        const session = parsed.session;
-        const error = parsed.error;
+        if (window.location.pathname === "/callback") {
+            const query = queryString.parse(window.location.search);
+            const state = query.state;
+            const code = query.code;
+            const error = query.error;
+            // todo handle error
+            window.history.pushState('Main', 'Title', '/');
 
-        if (error) {
-            this.setState({
-                error: error
-            });
-            return;
-        }
-
-        session && this.setState({
-            session: session,
-            userId: parsed.userId
-        });
-
-        console.log("State: ", this.state);
-        if (session && this.state.playLists.length === 0) {
-            fetch('http://localhost:8080/playlists/' + session)
+            let sessionIdPromise = fetch('http://localhost:8080/sessions', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({code})
+            })
                 .then(response => response.json())
-                .then(playlists => {
+                .then(response => {
+                    console.log("Response: ", response);
                     this.setState({
-                        playLists: playlists
+                        session: response
                     });
-                    console.log("playlists:", playlists);
-                    console.log("callback state: ", this.state);
+                    return response
+                });
+
+            sessionIdPromise
+                .then(sessionId => {
+                    fetch('http://localhost:8080/sessions/' + sessionId + '/userId')
+                        .then(response => response.json())
+                        .then(userId => {
+                            if (userId.error) {
+                                console.log("error:", userId.error);
+                                this.setState({
+                                    error: userId.error
+                                });
+                            } else {
+                                this.setState({
+                                    userId: userId
+                                });
+                            }
+                        });
+                });
+
+            sessionIdPromise
+                .then(sessionId => {
+                    fetch('http://localhost:8080/sessions/' + sessionId + '/playlists')
+                        .then(response => response.json())
+                        .then(playlists => {
+                            if (playlists.error) {
+                                console.log("error:", playlists.error);
+                                this.setState({
+                                    error: playlists.error
+                                });
+                            } else {
+                                this.setState({
+                                    playLists: playlists
+                                });
+                            }
+                        });
                 });
         }
     }
@@ -56,21 +88,24 @@ class App extends Component {
                 </header>
                 <div>
                     {this.state.error && (<div>{this.state.error}</div>)}
-                    {(!this.state.session && !this.state.error) && <a href="http://localhost:8080/login">Log in with Spotify</a>}
-                    {this.state.session && "Logged in as " + this.state.userId + " with session: " + this.state.session}
+                    {(!this.state.session && !this.state.error) && (<button onClick={authenticate}>
+                        Activate Lasers
+                    </button>)}
+                    {this.state.userId && (<div>Logged in as {this.state.userId}</div>)}
+                    {this.state.session && (<div>Session: {this.state.session}</div>)}
                 </div>
                 <div>
                     <ul>
-                        {this.state.playLists.map(item => item.name).map(item => (
-                            <li>{item}</li>
+                        {this.state.playLists.map(item => (
+                            <li key={item.id}>{item.name}</li>
                         ))}
                     </ul>
                 </div>
-                {(this.state.session || this.state.error) && (<a href={"http://localhost:3000/"}>log out or something</a>)}
+                {(this.state.session || this.state.error) && (
+                    <a href={"http://localhost:3000/"}>log out or something</a>)}
             </div>
         );
     }
 }
-
 
 export default App;
