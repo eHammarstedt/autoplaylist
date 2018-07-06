@@ -1,8 +1,8 @@
 import React, {Component} from 'react';
 import logo from './logo.svg';
 import './App.css';
-import * as queryString from "query-string";
 import authenticate from './Networking/Oauth2'
+import getParameterByName from './Util/QueryString'
 
 
 class App extends Component {
@@ -17,10 +17,9 @@ class App extends Component {
         };
 
         if (window.location.pathname === "/callback") {
-            const query = queryString.parse(window.location.search);
-            const state = query.state;
-            const code = query.code;
-            const error = query.error;
+            const state = getParameterByName("state");
+            const code = getParameterByName("code");
+            const error = getParameterByName("error");
             // todo handle error
             window.history.pushState('Main', 'Title', '/');
 
