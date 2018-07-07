@@ -1,6 +1,6 @@
 import uuidv4 from 'uuid/v4'
 
-const getFrontendBaseUrl = () => {
+export const getFrontendBaseUrl = () => {
     if (window.location.hostname === "localhost") {
         return "http://localhost:3000"
     }

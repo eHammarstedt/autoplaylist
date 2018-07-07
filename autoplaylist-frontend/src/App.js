@@ -9,6 +9,8 @@ class App extends Component {
     constructor(props) {
         super(props);
 
+        this.logout = this.logout.bind(this);
+
         this.state = {
             session: null,
             userId: null,
@@ -20,6 +22,8 @@ class App extends Component {
             const state = getParameterByName("state");
             const code = getParameterByName("code");
             const error = getParameterByName("error");
+            console.log("State:", state);
+            console.log("Error:", error);
             // todo handle error
             window.history.pushState('Main', 'Title', '/');
 
@@ -88,7 +92,7 @@ class App extends Component {
                 <div>
                     {this.state.error && (<div>{this.state.error}</div>)}
                     {(!this.state.session && !this.state.error) && (<button onClick={authenticate}>
-                        Activate Lasers
+                        Login with your Spotify Account
                     </button>)}
                     {this.state.userId && (<div>Logged in as {this.state.userId}</div>)}
                     {this.state.session && (<div>Session: {this.state.session}</div>)}
@@ -101,9 +105,21 @@ class App extends Component {
                     </ul>
                 </div>
                 {(this.state.session || this.state.error) && (
-                    <a href={"http://localhost:3000/"}>log out or something</a>)}
+                    <button onClick={this.logout}>
+                        Log out
+                    </button>
+                )}
             </div>
         );
+    }
+
+    logout() {
+        this.setState({
+            session: null,
+            userId: null,
+            playLists: [],
+            error: null
+        });
     }
 }
 
