@@ -65,7 +65,7 @@ internal fun refreshToken(refreshToken: RefreshToken): CompletableFuture<Tokens>
             .deserialize()
 }
 
-internal fun findArtist(accessToken: AccessToken, name: String): CompletableFuture<List<Artist>> {
+internal fun findArtist(accessToken: AccessToken, name: ArtistName): CompletableFuture<List<Artist>> {
     return Fuel.get("https://api.spotify.com/v1/search",
             listOf(
                     "q" to name,
@@ -95,7 +95,7 @@ internal fun getTracks(accessToken: AccessToken, album: AlbumId): CompletableFut
 
 internal fun createPlaylist(accessToken: AccessToken,
                             userId: UserId,
-                            name: String,
+                            name: PlaylistName,
                             description: String,
                             public: Boolean): CompletableFuture<PlayList> {
     return Fuel.post("https://api.spotify.com/v1/users/$userId/playlists")
@@ -191,7 +191,16 @@ internal data class UserId(@get:JsonIgnore val value: String) {
 }
 
 internal data class PlayListsResponse(val items: List<PlayList>, val total: Int)
-internal data class PlayList(val id: PlayListId, val name: String)
+internal data class PlayList(val id: PlayListId, val name: PlaylistName)
+internal data class PlaylistName(@get:JsonIgnore val value: String) {
+    init {
+        require(value.isNotBlank()) { "PlaylistName can't be empty" }
+    }
+
+    @JsonValue
+    override fun toString() = value
+}
+
 internal data class PlayListId(@get:JsonIgnore val value: String) {
     init {
         require(value.isNotBlank()) { "PlayListId can't be empty" }
@@ -203,7 +212,16 @@ internal data class PlayListId(@get:JsonIgnore val value: String) {
 
 internal data class FindArtistResponse(val artists: Artists)
 internal data class Artists(val items: List<Artist>, val total: Int)
-internal data class Artist(val id: ArtistId, val name: String)
+internal data class Artist(val id: ArtistId, val name: ArtistName)
+internal data class ArtistName(@get:JsonIgnore val value: String) {
+    init {
+        require(value.isNotBlank()) { "ArtistName can't be empty" }
+    }
+
+    @JsonValue
+    override fun toString() = value
+}
+
 internal data class ArtistId(@get:JsonIgnore val value: String) {
     init {
         require(value.isNotBlank()) { "ArtistId can't be empty" }
@@ -225,10 +243,19 @@ internal data class AlbumId(@get:JsonIgnore val value: String) {
 }
 
 internal data class GetTracksResponse(val items: List<Track>, val total: Int)
-internal data class Track(val id: TrackId, val name: String, val uri: TrackUri)
+internal data class Track(val id: TrackId, val name: TrackName, val uri: TrackUri)
 internal data class TrackId(@get:JsonIgnore val value: String) {
     init {
         require(value.isNotBlank()) { "TrackId can't be empty" }
+    }
+
+    @JsonValue
+    override fun toString() = value
+}
+
+internal data class TrackName(@get:JsonIgnore val value: String) {
+    init {
+        require(value.isNotBlank()) { "TrackName can't be empty" }
     }
 
     @JsonValue
