@@ -12,6 +12,7 @@ jobs:
       - run:
           name: Build docker images
           command: ./build.sh
+          no_output_timeout: 30m
       - run: |
                 docker login -u $DOCKER_USER -p $DOCKER_PASS
                 docker push richodemus/autoplaylists-frontend:latest
