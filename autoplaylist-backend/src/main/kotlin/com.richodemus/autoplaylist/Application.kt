@@ -26,7 +26,10 @@ open class Application {
         logger.info("req: $request")
         val uuid = UUID.randomUUID()
         sessions[uuid] = getToken(request.code)
-                .map { it.accessToken }
+                .map {
+                    logger.info("Tokens: {}", it)
+                    it.accessToken
+                }
         return uuid
     }
 
