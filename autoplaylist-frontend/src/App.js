@@ -12,7 +12,7 @@ class App extends Component {
         this.logout = this.logout.bind(this);
 
         this.state = {
-            session: null,
+            loggedIn: false,
             userId: null,
             playLists: [],
             error: null
@@ -27,7 +27,8 @@ class App extends Component {
             // todo handle error
             window.history.pushState('Main', 'Title', '/');
 
-            let sessionIdPromise = fetch(getBackendBaseUrl() + '/sessions', {
+            let loginPromise = fetch(getBackendBaseUrl() + '/sessions', {
+                credentials: 'include',
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -39,14 +40,15 @@ class App extends Component {
                 .then(response => {
                     console.log("Response: ", response);
                     this.setState({
-                        session: response
+                        loggedIn: true
                     });
-                    return response
                 });
 
-            sessionIdPromise
-                .then(sessionId => {
-                    fetch(getBackendBaseUrl() + '/sessions/' + sessionId + '/userId')
+            loginPromise
+                .then(() => {
+                    fetch(getBackendBaseUrl() + '/users/me',{
+                        credentials: 'include'
+                    })
                         .then(response => response.json())
                         .then(userId => {
                             if (userId.error) {
@@ -62,9 +64,11 @@ class App extends Component {
                         });
                 });
 
-            sessionIdPromise
-                .then(sessionId => {
-                    fetch(getBackendBaseUrl() + '/sessions/' + sessionId + '/playlists')
+            loginPromise
+                .then(() => {
+                    fetch(getBackendBaseUrl() + '/playlists',{
+                        credentials: 'include'
+                    })
                         .then(response => response.json())
                         .then(playlists => {
                             if (playlists.error) {
@@ -91,11 +95,10 @@ class App extends Component {
                 </header>
                 <div>
                     {this.state.error && (<div>{this.state.error}</div>)}
-                    {(!this.state.session && !this.state.error) && (<button onClick={authenticate}>
+                    {(!this.state.loggedIn && !this.state.error) && (<button onClick={authenticate}>
                         Login with your Spotify Account
                     </button>)}
                     {this.state.userId && (<div>Logged in as {this.state.userId}</div>)}
-                    {this.state.session && (<div>Session: {this.state.session}</div>)}
                 </div>
                 <div>
                     <ul>
@@ -104,7 +107,7 @@ class App extends Component {
                         ))}
                     </ul>
                 </div>
-                {(this.state.session || this.state.error) && (
+                {(this.state.loggedIn || this.state.error) && (
                     <button onClick={this.logout}>
                         Log out
                     </button>
@@ -115,7 +118,7 @@ class App extends Component {
 
     logout() {
         this.setState({
-            session: null,
+            loggedIn: false,
             userId: null,
             playLists: [],
             error: null

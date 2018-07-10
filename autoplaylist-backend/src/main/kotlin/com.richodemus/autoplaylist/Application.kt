@@ -9,79 +9,88 @@ import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import javax.servlet.http.HttpSession
 
-@CrossOrigin(origins = ["*"], maxAge = 3600)
+@CrossOrigin(
+        origins = ["http://localhost:3000", "https://autoplaylists.richodemus.com"],
+        maxAge = 3600,
+        allowCredentials = "true"
+)
 @RestController
 @SpringBootApplication
 open class Application {
     private val logger = LoggerFactory.getLogger(Application::class.java)
-    private val sessions = mutableMapOf<UUID, CompletableFuture<AccessToken>>()
+    private val userIds = mutableMapOf<AccessToken, UserId>()
 
     @PostMapping("/sessions")
-    internal fun createSession(@RequestBody request: CreateSessionRequest): UUID {
+    internal fun createSession(session: HttpSession, @RequestBody request: CreateSessionRequest): CreateSessionResponse {
         logger.info("req: $request")
-        val uuid = UUID.randomUUID()
-        sessions[uuid] = getToken(request.code)
+        val tokenFuture = getToken(request.code)
                 .map {
                     logger.info("Tokens: {}", it)
                     it.accessToken
                 }
-        return uuid
+
+        session.setAttribute("accessToken", tokenFuture.join())
+        return CreateSessionResponse("OK")
     }
 
-    @GetMapping("/sessions/{sessionId}/userId")
-    internal fun getUser(@PathVariable("sessionId") sessionId: UUID): CompletableFuture<UserId> {
-        val sessionFuture = sessions[sessionId]
-        logger.info("Session future: $sessionFuture")
-        return sessionFuture
-                ?.flatMap { getUserId(it) }
-                ?.map {
-                    logger.info("Logged in {}", it)
-                    it
-                }
-                ?: throw RuntimeException("no such session")
+    internal data class CreateSessionResponse(val msg: String)
+
+    @GetMapping("/users/me")
+    internal fun getUser(session: HttpSession): CompletableFuture<UserId> {
+        val accessToken = session.getAttribute("accessToken") as AccessToken
+        logger.info("Session {} with token {}", session.id, accessToken)
+        return getUserIdFromCache(accessToken)
     }
 
-    @GetMapping("/sessions/{sessionId}/playlists")
-    internal fun getPlaylists(@PathVariable("sessionId") sessionId: UUID): CompletableFuture<List<PlayList>> {
-        return sessions[sessionId]
-                ?.flatMap { getPlaylists(it) }
-                ?.map { it.items }
-                ?: throw RuntimeException("no such session")
+    @GetMapping("/playlists")
+    internal fun getPlaylists(session: HttpSession): CompletableFuture<List<PlayList>> {
+        val accessToken = session.getAttribute("accessToken") as AccessToken
+        return getPlaylists(accessToken).map { it.items }
     }
 
-    @PostMapping("/users/{userId}/playlists")
+    @PostMapping("/playlists")
     internal fun createPlayList(
-            @PathVariable("userId") userId: UserId,
+            session: HttpSession,
             @RequestBody request: CreatePlaylistRequest
     ): CompletableFuture<CreatePlaylistResponse> {
         logger.info("Asked to create playlist {} with tracks by {}", request.name, request.artist)
-        return sessions[request.sessionId]
-                ?.flatMap { createPlayListFromArtist(it, userId, request.name, request.artist) }
-                ?.map {
+        val accessToken = session.getAttribute("accessToken") as AccessToken
+        return getUserIdFromCache(accessToken)
+                .flatMap { userId ->
+                    createPlayListFromArtist(accessToken, userId, request.name, request.artist)
+                }
+                .map {
                     if (it.isNotEmpty())
                         CreatePlaylistResponse(true, it)
                     else
                         CreatePlaylistResponse(false)
                 }
-                ?.recover { e ->
+                .recover { e ->
                     logger.info("Failed to create playlist {}", request, e)
                     CreatePlaylistResponse(false)
                 }
-                ?: Future { CreatePlaylistResponse(false) }
+
+    }
+
+    private fun getUserIdFromCache(accessToken: AccessToken): CompletableFuture<UserId> {
+        return Future {
+            userIds.computeIfAbsent(accessToken) {
+                getUserId(accessToken).join()
+            }
+        }
     }
 }
 
 data class CreateSessionRequest(val code: String)
 
 // todo move sessionId to auth header
-internal data class CreatePlaylistRequest(val name: PlaylistName, val sessionId: UUID, val artist: ArtistName)
+internal data class CreatePlaylistRequest(val name: PlaylistName, val artist: ArtistName)
 
 internal data class CreatePlaylistResponse(val successful: Boolean, val tracks: List<TrackName> = emptyList())
 
