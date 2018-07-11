@@ -1,9 +1,10 @@
 import React, {Component} from 'react';
-import logo from './logo.svg';
 import './App.css';
 import {authenticate, getBackendBaseUrl} from './Networking/Oauth2'
 import getParameterByName from './Util/QueryString'
-
+import ActiveView from './Views/ActiveView'
+import store from './Views/store'
+import {setPlaylists} from './Views/DisplayPlaylists/actions'
 
 class App extends Component {
     constructor(props) {
@@ -77,9 +78,11 @@ class App extends Component {
                                     error: playlists.error
                                 });
                             } else {
-                                this.setState({
-                                    playLists: playlists
-                                });
+                                const action = setPlaylists(playlists)
+                                store.dispatch(action)
+                                // this.setState({
+                                //     playLists: playlists
+                                // });
                             }
                         });
                 });
@@ -89,29 +92,7 @@ class App extends Component {
     render() {
         return (
             <div className="App">
-                <header className="App-header">
-                    <img src={logo} className="App-logo" alt="logo"/>
-                    <h1 className="App-title">Autoplaylist</h1>
-                </header>
-                <div>
-                    {this.state.error && (<div>{this.state.error}</div>)}
-                    {(!this.state.loggedIn && !this.state.error) && (<button onClick={authenticate}>
-                        Login with your Spotify Account
-                    </button>)}
-                    {this.state.userId && (<div>Logged in as {this.state.userId}</div>)}
-                </div>
-                <div>
-                    <ul>
-                        {this.state.playLists.map(item => (
-                            <li key={item.id}>{item.name}</li>
-                        ))}
-                    </ul>
-                </div>
-                {(this.state.loggedIn || this.state.error) && (
-                    <button onClick={this.logout}>
-                        Log out
-                    </button>
-                )}
+                <ActiveView error={this.state.error} loggedIn={this.state.loggedIn} authenticate={authenticate} playLists={store.getState().playlists}/>
             </div>
         );
     }
